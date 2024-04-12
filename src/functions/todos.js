@@ -56,7 +56,8 @@ app.http('getTodo', {
     },
 });
 
-// curl -X POST --location http://localhost:7071/api/todo --header "Content-Type:application/json" --data '{"name":"shivali","items":[{"task":"testing","status":"todo"}]}' --verbose
+// curl --request POST --location http://localhost:7071/api/todo --header "Content-Type:application/json" \
+// --data '{"name":"shivali","items":[{"task":"testing","status":"todo"}]}' --verbose
 app.http('newTodo', {
     methods: ['POST'],
     authLevel: 'anonymous',
@@ -75,5 +76,78 @@ app.http('newTodo', {
             status: 201, /* Defaults to 200 */
             jsonBody: {_id: newTodoResult._id, name: newTodoResult.name, items:newTodoResult.items}
         };
+    },
+});
+
+// curl --request PUT --location http://localhost:7071/api/todo/6618d335168fd1a2295031c4 --header "Content-Type:application/json" \ 
+// --data '{"name":"sayan","items":[{"task":"coding","status":"done"}]}' --verbose
+app.http('updateTodo', {
+    methods: ['PUT'],
+    authLevel: 'anonymous',
+    route: 'todo/{id}',
+    handler: async (request, context) => {
+        context.log(`Http function updateTodo processed request for url "${request.url}"`);
+        console.log('request.params.id', request.params.id);
+
+        const id = request.params.id;
+        const body = await request.json();
+        console.log(body);
+        // skipping validation -- but I can at least do some basic defaulting, and only grab the things I want.        
+        if (ObjectId.isValid(id)) {
+            const updateTodoResult = await con.model('TodoList').updateOne({ _id: id }, {
+                name: body?.name,
+                items: body?.items
+            });
+        
+            if(updateTodoResult.matchedCount === 0) {
+                return {
+                    status: 404,
+                    jsonBody: {
+                        message: 'To do item not found'
+                    }
+                };
+            }
+            return {
+                status: 200,
+                jsonBody: { updateTodoResult }
+            };             
+        }
+        return {
+            status:404,
+            jsonBody: {error: "no todo found by Id: " + request.params.id}
+        }
+    },
+});
+
+//curl --request DELETE --location http://localhost:7071/api/todo/66192816fa6fb0bbd36e431a --verbose
+app.http('deleteTodo', {
+    methods: ['DELETE'],
+    authLevel: 'anonymous',
+    route: 'todo/{id}',
+    handler: async (request, context) => {
+        context.log(`Http function deleteTodo processed request for url "${request.url}"`);
+        console.log('request.params.id', request.params.id);
+
+        const id = request.params.id;
+        if (ObjectId.isValid(id)) {
+            const deleteTodoResult = await con.model('TodoList').deleteOne({ _id: id });
+            if(deleteTodoResult.deletedCount === 0) {
+                return {
+                    status: 404,
+                    jsonBody: {
+                        message: 'Todo list not found'
+                    }
+                };
+            }
+        
+            return {
+                status: 200,
+                jsonBody: { deleteTodoResult }
+            };
+        }
+        return {
+            status:404,
+            jsonBody: {error: "no todo found by Id: " + request.params.id}
+        }
     },
 });
