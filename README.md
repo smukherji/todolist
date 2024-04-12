@@ -15,9 +15,9 @@ npm install mongodb
 Testing with curl:
 
 ```
-curl -X POST --location http://localhost:7071/api/todo --header "Content-Type:application/json" --data '{"name":"shivali","items":[{"task":"testing","status":"todo"}]}' --verbose
+curl --location http://localhost:7071/api/todo --header "Content-Type:application/json" --data '{"name":"shivali","items":[{"task":"testing","status":"todo"}]}' --verbose
 
 curl --location http://localhost:7071/api/todo/6618d335168fd1a2295031c --verbose
 
- curl --location http://localhost:7071/api/todo --verbose
+curl --location http://localhost:7071/api/todo --verbose
 ```
