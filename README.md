@@ -6,6 +6,7 @@ TODO List with Azure functions and Cosmos DB
 Install the following dependencies:
 
 ```
+npm install -g azurite
 npm install mongoose
 npm install mongodb
 ```
