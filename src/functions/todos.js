@@ -3,7 +3,7 @@ const mongoose = require ('mongoose');
 const { ObjectId } = require('mongodb');
 const { TodoModel } = require("./todoschema");
 
-mongoose.connect(process.env.MONGO_DB_URI, { useNewUrlParser: true, useUnifiedTopology: true, autoIndex: true });
+mongoose.connect(process.env.AZURE_MONGO_DB, { useNewUrlParser: true, useUnifiedTopology: true, autoIndex: true });
 const con = mongoose.connection;
 
 try {
@@ -13,6 +13,29 @@ try {
 } catch (error) {
     console.log("Error: " + error);
 }
+
+// curl --location http://localhost:7071/api/user --verbose
+app.http('getLoggedIn', {
+    methods: ['GET'],
+    authLevel: 'anonymous',
+    route: 'user',
+    handler: async (request, context) => {
+        const authHeader = request.headers.get('X-MS-CLIENT-PRINCIPAL');
+        let isLoggedIn = false;
+        let username = null;
+
+        if (authHeader) {
+            isLoggedIn = true;
+            // extract username from header
+            const decodedHeader = JSON.parse(atob(authHeader));
+            username = decodedHeader?.userDetails?.name;
+        }
+
+        return {
+            body: JSON.stringify({ isLoggedIn, username }),
+        };
+    }
+});
 
 // curl --location http://localhost:7071/api/todo --verbose
 app.http('getTodoList', {
@@ -56,8 +79,8 @@ app.http('getTodo', {
     },
 });
 
-// curl --request POST --location http://localhost:7071/api/todo --header "Content-Type:application/json" \
-// --data '{"name":"shivali","items":[{"task":"testing","status":"todo"}]}' --verbose
+// curl --location http://localhost:7071/api/todo --header "Content-Type:application/json" \
+//  --data '{"name":"shivali","task":"testing","status":"todo"}' --verbose
 app.http('newTodo', {
     methods: ['POST'],
     authLevel: 'anonymous',
@@ -69,18 +92,19 @@ app.http('newTodo', {
         // skipping validation -- but I can at least do some basic defaulting, and only grab the things I want.
         const newTodoResult = await con.model('TodoList').create({
             name: body?.name,
-            items: body?.items
+            task: body?.task,
+            status: body?.status
         });
 
         return{
             status: 201, /* Defaults to 200 */
-            jsonBody: {_id: newTodoResult._id, name: newTodoResult.name, items:newTodoResult.items}
+            jsonBody: {_id: newTodoResult._id, name: newTodoResult.name, task:newTodoResult.task, status:newTodoResult.status}
         };
     },
 });
 
-// curl --request PUT --location http://localhost:7071/api/todo/6618d335168fd1a2295031c4 --header "Content-Type:application/json" \ 
-// --data '{"name":"sayan","items":[{"task":"coding","status":"done"}]}' --verbose
+// curl --request PUT --location http://localhost:7071/api/todo/661e7e8952294b40cc5eab51 --header "Content-Type:application/json" \ 
+// --data '{"name":"shivali","task":"designing","status":"done"}' --verbose
 app.http('updateTodo', {
     methods: ['PUT'],
     authLevel: 'anonymous',
@@ -96,7 +120,8 @@ app.http('updateTodo', {
         if (ObjectId.isValid(id)) {
             const updateTodoResult = await con.model('TodoList').updateOne({ _id: id }, {
                 name: body?.name,
-                items: body?.items
+                task: body?.task,
+                status: body?.status
             });
         
             if(updateTodoResult.matchedCount === 0) {
